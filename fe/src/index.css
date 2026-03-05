@@ -282,4 +282,50 @@
             transform: translateY(0) scale(1);
         }
     }
+
+    @keyframes rippleOut {
+        0% {
+            transform: scale(1);
+            opacity: 0.5;
+        }
+        100% {
+            transform: scale(1.6);
+            opacity: 0;
+        }
+    }
+
+    @keyframes loading-shimmer {
+        0% {
+            transform: translateX(-100%);
+        }
+        100% {
+            transform: translateX(300%);
+        }
+    }
+
+    @keyframes liquid-drift {
+        0%,
+        100% {
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            transform: translate(0, 0) rotate(0deg);
+        }
+        33% {
+            border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+            transform: translate(5%, 5%) rotate(5deg);
+        }
+        66% {
+            border-radius: 50% 40% 30% 60% / 40% 50% 60% 30%;
+            transform: translate(-5%, 2%) rotate(-5deg);
+        }
+    }
+
+    @keyframes soft-float {
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
 }

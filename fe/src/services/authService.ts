@@ -5,7 +5,8 @@ export const authService = {
         password: string,
         email: string,
         firstName: string,
-        lastName: string
+        lastName: string,
+        phone?: string
     ) => {
         const res = await api.post(
             'auth/signup',
@@ -15,16 +16,17 @@ export const authService = {
                 email,
                 firstName,
                 lastName,
+                phone,
             },
             { withCredentials: true }
         );
         return res.data;
     },
-    signIn: async (username: string, password: string) => {
+    signIn: async (identifier: string, password: string) => {
         const res = await api.post(
             'auth/signin',
             {
-                username,
+                identifier,
                 password,
             },
             { withCredentials: true }
@@ -41,5 +43,22 @@ export const authService = {
     refresh: async () => {
         const res = await api.post('auth/refresh', { withCredentials: true });
         return res.data.accessToken;
+    },
+    updateDisplayName: async (name: string) => {
+        const res = await api.patch('users/me', { displayName: name }, { withCredentials: true });
+        return res.data.user;
+    },
+    updateAvatar: async (file: File) => {
+        const formData = new FormData();
+        formData.append('avatar', file);
+        const res = await api.patch('users/me/avatar', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            withCredentials: true,
+        });
+        return res.data.user;
+    },
+    updateProfile: async (data: { displayName?: string; bio?: string; phone?: string }) => {
+        const res = await api.patch('users/me', data, { withCredentials: true });
+        return res.data.user;
     },
 };

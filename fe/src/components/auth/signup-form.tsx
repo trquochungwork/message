@@ -14,6 +14,11 @@ const signUpSchema = z.object({
     lastname: z.string().min(1, 'Họ bắt buộc phải có'),
     username: z.string().min(3, 'Tên đăng nhập phải có ít nhất 3 ký tự '),
     email: z.string().email('Email không hợp lệ'),
+    phone: z
+        .string()
+        .regex(/^(0|\+84)\d{9,10}$/, 'Số điện thoại không hợp lệ (VD: 0912345678)')
+        .or(z.literal(''))
+        .optional(),
     password: z.string().min(6, 'Mật khẩu ít nhất phải có 6 ký tự '),
 });
 type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -28,9 +33,13 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
         resolver: zodResolver(signUpSchema),
     });
     const onSubmit = async (data: SignUpFormValues) => {
-        const { firstname, lastname, username, email, password } = data;
-        await signUp(username, password, email, firstname, lastname);
-        nav('/signin');
+        const { firstname, lastname, username, email, password, phone } = data;
+        try {
+            await signUp(username, password, email, firstname, lastname, phone || undefined);
+            nav('/signin');
+        } catch {
+            // Lỗi đã được xử lý trong store (toast), không chuyển trang
+        }
     };
     return (
         <div className={cn('flex flex-col gap-6', className)} {...props}>
@@ -116,6 +125,25 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                                 {errors.email && (
                                     <p className='text-destructive text-sm'>
                                         {errors.email.message}
+                                    </p>
+                                )}
+                            </div>
+                            {/* Số điện thoại */}
+                            <div className='flex flex-col gap-3'>
+                                <Label htmlFor='phone' className='block text-sm'>
+                                    Số điện thoại{' '}
+                                    <span className='text-muted-foreground'>(tùy chọn)</span>
+                                </Label>
+                                <Input
+                                    type='tel'
+                                    id='phone'
+                                    placeholder='0912345678'
+                                    className=''
+                                    {...register('phone')}
+                                />
+                                {errors.phone && (
+                                    <p className='text-destructive text-sm'>
+                                        {errors.phone.message}
                                     </p>
                                 )}
                             </div>

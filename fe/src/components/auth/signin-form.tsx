@@ -10,8 +10,7 @@ import { useAuthStore } from '../../stores/useAuthStores.ts';
 import { useNavigate } from 'react-router';
 
 const signInSchema = z.object({
-    username: z.string().min(3, 'Tên đăng nhập phải có ít nhất 3 ký tự '),
-
+    identifier: z.string().min(3, 'Vui lòng nhập email hoặc số điện thoại'),
     password: z.string().min(6, 'Mật khẩu ít nhất phải có 6 ký tự '),
 });
 type SignInFormValues = z.infer<typeof signInSchema>;
@@ -27,8 +26,8 @@ export function SignInForm({ className, ...props }: React.ComponentProps<'div'>)
         resolver: zodResolver(signInSchema),
     });
     const onSubmit = async (data: SignInFormValues) => {
-        const { username, password } = data;
-        await signIn(username, password);
+        const { identifier, password } = data;
+        await signIn(identifier, password);
         nav('/');
     };
     return (
@@ -48,21 +47,21 @@ export function SignInForm({ className, ...props }: React.ComponentProps<'div'>)
                                 </p>
                             </div>
 
-                            {/* Username */}
+                            {/* Email hoặc Số điện thoại */}
                             <div className='flex flex-col gap-3'>
-                                <Label htmlFor='username' className='block text-sm'>
-                                    Tên đăng nhập
+                                <Label htmlFor='identifier' className='block text-sm'>
+                                    Email hoặc Số điện thoại
                                 </Label>
                                 <Input
                                     type='text'
-                                    id='username'
-                                    placeholder='message'
+                                    id='identifier'
+                                    placeholder='email@example.com hoặc 0912345678'
                                     className=''
-                                    {...register('username')}
+                                    {...register('identifier')}
                                 />
-                                {errors.username && (
+                                {errors.identifier && (
                                     <p className='text-destructive text-sm'>
-                                        {errors.username.message}
+                                        {errors.identifier.message}
                                     </p>
                                 )}
                             </div>
