@@ -1,12 +1,230 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
     <head>
         <meta charset="UTF-8" />
         <link rel="icon" type="image/svg+xml" href="./public/logo.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>message</title>
+        <title>Message</title>
+        <style>
+            /* Inline loading screen - hiện ngay trước khi React load */
+            #app-preloader {
+                position: fixed;
+                inset: 0;
+                z-index: 99999;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                background: #0b0b1a;
+                transition:
+                    opacity 0.4s ease,
+                    visibility 0.4s ease;
+            }
+            #app-preloader.hide {
+                opacity: 0;
+                visibility: hidden;
+            }
+
+            /* Animated background blobs */
+            .preload-blob {
+                position: absolute;
+                border-radius: 50%;
+                filter: blur(100px);
+                animation: preload-drift 8s ease-in-out infinite alternate;
+            }
+            .preload-blob-1 {
+                width: 500px;
+                height: 500px;
+                top: -10%;
+                left: -5%;
+                background: rgba(168, 85, 247, 0.25);
+            }
+            .preload-blob-2 {
+                width: 400px;
+                height: 400px;
+                bottom: -10%;
+                right: -5%;
+                background: rgba(236, 72, 153, 0.2);
+                animation-delay: 2s;
+                animation-direction: alternate-reverse;
+            }
+            .preload-blob-3 {
+                width: 300px;
+                height: 300px;
+                top: 40%;
+                left: 40%;
+                background: rgba(59, 130, 246, 0.15);
+                animation-delay: 4s;
+            }
+
+            @keyframes preload-drift {
+                0% {
+                    transform: translate(0, 0) scale(1);
+                }
+                100% {
+                    transform: translate(30px, -20px) scale(1.15);
+                }
+            }
+
+            /* Logo pulse animation */
+            .preload-logo-wrap {
+                position: relative;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 40px;
+            }
+
+            .preload-ring {
+                position: absolute;
+                border-radius: 50%;
+                border: 2px solid transparent;
+            }
+            .preload-ring-1 {
+                width: 120px;
+                height: 120px;
+                border-top-color: rgba(168, 85, 247, 0.7);
+                border-right-color: rgba(236, 72, 153, 0.5);
+                animation: preload-spin 2.5s linear infinite;
+            }
+            .preload-ring-2 {
+                width: 96px;
+                height: 96px;
+                border-bottom-color: rgba(59, 130, 246, 0.6);
+                border-left-color: rgba(168, 85, 247, 0.4);
+                animation: preload-spin 3.5s linear infinite reverse;
+            }
+
+            @keyframes preload-spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .preload-icon {
+                width: 56px;
+                height: 56px;
+                border-radius: 16px;
+                background: linear-gradient(135deg, #a855f7, #ec4899);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 0 50px rgba(168, 85, 247, 0.4);
+                animation: preload-icon-pulse 2s ease-in-out infinite;
+            }
+
+            @keyframes preload-icon-pulse {
+                0%,
+                100% {
+                    box-shadow: 0 0 30px rgba(168, 85, 247, 0.3);
+                }
+                50% {
+                    box-shadow: 0 0 60px rgba(168, 85, 247, 0.6);
+                }
+            }
+
+            .preload-icon svg {
+                width: 28px;
+                height: 28px;
+                fill: none;
+                stroke: white;
+                stroke-width: 2.5;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+
+            .preload-title {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                font-size: 40px;
+                font-weight: 900;
+                letter-spacing: -1px;
+                background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.4) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin: 0 0 20px 0;
+            }
+
+            /* Loading dots */
+            .preload-dots {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .preload-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: rgba(168, 85, 247, 0.6);
+                animation: preload-bounce 1.4s ease-in-out infinite;
+            }
+            .preload-dot:nth-child(2) {
+                animation-delay: 0.15s;
+            }
+            .preload-dot:nth-child(3) {
+                animation-delay: 0.3s;
+            }
+
+            @keyframes preload-bounce {
+                0%,
+                80%,
+                100% {
+                    transform: scale(0.6);
+                    opacity: 0.4;
+                }
+                40% {
+                    transform: scale(1.2);
+                    opacity: 1;
+                }
+            }
+
+            .preload-status {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                font-size: 11px;
+                font-weight: 600;
+                color: rgba(255, 255, 255, 0.3);
+                letter-spacing: 3px;
+                text-transform: uppercase;
+                margin-top: 16px;
+            }
+        </style>
     </head>
     <body>
+        <!-- Preloader - hiện ngay lập tức trước khi JS load -->
+        <div id="app-preloader">
+            <div class="preload-blob preload-blob-1"></div>
+            <div class="preload-blob preload-blob-2"></div>
+            <div class="preload-blob preload-blob-3"></div>
+
+            <div
+                style="
+                    position: relative;
+                    z-index: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                "
+            >
+                <div class="preload-logo-wrap">
+                    <div class="preload-ring preload-ring-1"></div>
+                    <div class="preload-ring preload-ring-2"></div>
+                    <div class="preload-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path
+                                d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                            />
+                        </svg>
+                    </div>
+                </div>
+                <h1 class="preload-title">Message</h1>
+                <div class="preload-dots">
+                    <div class="preload-dot"></div>
+                    <div class="preload-dot"></div>
+                    <div class="preload-dot"></div>
+                </div>
+                <p class="preload-status">Đang kết nối</p>
+            </div>
+        </div>
+
         <div id="root"></div>
         <script type="module" src="/src/main.tsx"></script>
     </body>
