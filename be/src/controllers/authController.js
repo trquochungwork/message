@@ -4,12 +4,12 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import Seccsion from '../models/Seccsion.js';
 
-const ACCESS_TOKEN_TTL = '30s'; //* thường dưới 15 phút
+const ACCESS_TOKEN_TTL = '15m'; //* Thường dưới 15 phút
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 1000; //*thường dưới 14 ngày
 // * Đăng ký
 export const signUp = async (req, res) => {
     try {
-        const { username, password, email, firstName, lastName } = req.body;
+        const { username, password, email, firstName, lastName, phone } = req.body;
         if (!username || !password || !email || !firstName || !lastName) {
             return res
                 .status(400)
@@ -17,19 +17,32 @@ export const signUp = async (req, res) => {
         }
 
         //* Kiểm tra xem username tồn tại chưa
-        const duplicate = await User.findOne({ username });
+        const lowerCaseUsername = username.toLowerCase();
+        const duplicate = await User.findOne({ username: lowerCaseUsername });
         if (duplicate) {
             return res.status(409).json({ message: 'username đã tồn tại !' });
         }
+
+        //* Kiểm tra trùng số điện thoại nếu có
+        if (phone) {
+            const phoneExists = await User.findOne({ phone });
+            if (phoneExists) {
+                return res.status(409).json({ message: 'Số điện thoại đã được sử dụng !' });
+            }
+        }
+
         //* mã hóa passowrd
         const hashedPassword = await bcrypt.hash(password, 10);
         //* tạo user mới
-        await User.create({
-            username,
+        const userData = {
+            username: lowerCaseUsername,
             hashedPassword,
-            email,
-            displayName: `${firstName}${lastName}`,
-        });
+            email: email.toLowerCase(),
+            displayName: `${firstName} ${lastName}`,
+        };
+        if (phone) userData.phone = phone;
+
+        await User.create(userData);
         //* return
         return res.sendStatus(204);
     } catch (error) {
@@ -37,23 +50,46 @@ export const signUp = async (req, res) => {
         res.status(500).json({ message: 'Lỗi hệ thống' });
     }
 };
-//* Đăng nhập signUp
+// * Đăng nhập - hỗ trợ email, số điện thoại, hoặc username
 export const signIn = async (req, res) => {
     try {
-        // * lấy từ input
-        const { username, password } = req.body;
-        if (!username || !password) {
-            return res.status(400).json({ message: 'Thiếu username hoặc password ' });
+        // * lấy từ input - identifier có thể là email, phone, hoặc username
+        const { identifier, password, username } = req.body;
+        const loginId = identifier || username; // fallback cho client cũ
+        console.log(`Login attempt for: ${loginId}`);
+
+        if (!loginId || !password) {
+            return res.status(400).json({ message: 'Thiếu thông tin đăng nhập hoặc mật khẩu' });
         }
-        //* lấy hashedPassword trong db để so với password input
-        const user = await User.findOne({ username });
+
+        //* Xác định kiểu đăng nhập và tìm user
+        let user;
+        const trimmedId = loginId.trim();
+
+        if (trimmedId.includes('@')) {
+            //* Đăng nhập bằng email
+            user = await User.findOne({ email: trimmedId.toLowerCase() });
+        } else if (/^\+?\d{9,15}$/.test(trimmedId.replace(/\s/g, ''))) {
+            //* Đăng nhập bằng số điện thoại
+            user = await User.findOne({ phone: trimmedId.replace(/\s/g, '') });
+        } else {
+            //* Đăng nhập bằng username (fallback)
+            user = await User.findOne({ username: trimmedId.toLowerCase() });
+        }
+
         if (!user) {
-            return res.status(400).json({ message: 'user hoặc password không chính xác ! ' });
+            console.log(`User not found: ${loginId}`);
+            return res
+                .status(400)
+                .json({ message: 'Thông tin đăng nhập hoặc mật khẩu không chính xác!' });
         }
         //* Kiểm tra password
         const passwordCorrect = await bcrypt.compare(password, user.hashedPassword);
         if (!passwordCorrect) {
-            return res.status(401).json({ message: 'user name hoặc password không chính xác !' });
+            console.log(`Invalid password for user: ${loginId}`);
+            return res
+                .status(401)
+                .json({ message: 'Thông tin đăng nhập hoặc mật khẩu không chính xác!' });
         }
 
         //* Nếu khớp thì tạo accessToken với JWT
@@ -69,19 +105,25 @@ export const signIn = async (req, res) => {
             refreshToken,
             expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL),
         });
+
+        const isProduction = process.env.NODE_ENV === 'production';
+
         //* Trả refresh tooken về cookie
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none', // be,fe deploy riêng
+            secure: isProduction, // Chỉ dùng secure: true ở production (HTTPS)
+            sameSite: isProduction ? 'none' : 'lax',
             maxAge: REFRESH_TOKEN_TTL,
         });
+
+        console.log(`Login successful for user: ${user.username}`);
+
         //* Trả aceess token về trong res
         return res
             .status(200)
             .json({ message: `User:${user.displayName} đã logged in !`, accessToken });
     } catch (error) {
-        console.log('Lỗi khi gọi signIn', error);
+        console.error('Lỗi khi gọi signIn', error);
         res.status(500).json({ message: 'Lỗi hệ thống' });
     }
 };
@@ -115,11 +157,11 @@ export const refreshToken = async (req, res) => {
         //* so với refresh token trong db */
         const session = await Seccsion.findOne({ refreshToken: token });
         if (!session) {
-            res.status(403).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
+            return res.status(403).json({ message: 'Token không hợp lệ hoặc đã hết hạn' });
         }
         //* Kiểm tra xem hết hạn token chưa
         if (session.expiresAt < new Date()) {
-            res.status(403).json({ message: 'Token đã hết hạn' });
+            return res.status(403).json({ message: 'Token đã hết hạn' });
         }
 
         //* Tạo accessToken mới
